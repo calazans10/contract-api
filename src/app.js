@@ -26,5 +26,11 @@ app.get('/contracts', getProfile, async (req, res) => {
     res.json(contracts)
 })
 
+app.get('/jobs/unpaid', getProfile, async (req, res) => {
+    const { Contract, Job } = req.app.get('models')
+    const { id: profile_id } = req.profile
+    const jobs = await Job.findAll({ include: { model: Contract, where: { [Op.or]: [{ ClientId: profile_id }, { ContractorId: profile_id }], status: 'in_progress' }, attributes: []}})
+    res.json(jobs)
+})
 
 module.exports = app;
