@@ -64,4 +64,30 @@ app.post('/jobs/:job_id/pay', getProfile, async (req, res) => {
     res.status(201).end()
 })
 
+app.post('/balances/deposit/:userId', getProfile, async (req, res) => {
+    const { Contract, Job, Profile } = req.app.get('models')
+    const { userId } = req.params
+    const { profile } = req
+
+    const client = await Profile.findOne({ where: { id: userId, type: 'client' } })
+    if(!client) return res.status(404).end()
+
+    const sumPrice = await Job.sum('price', { include: { model: Contract, where: { ClientId: profile.id,  status: 'in_progress' } } })
+    const limit = sumPrice * (25 / 100)
+    const { amount } = req.body 
+
+    if(limit < amount) return res.status(422).end()
+
+    const t = await sequelize.transaction();
+
+    try {
+        client.balance += amount
+        await client.save()
+    } catch (error) {
+        await t.rollback();
+    }
+    
+    res.status(201).end()
+})
+
 module.exports = app;
